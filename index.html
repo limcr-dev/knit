@@ -1,0 +1,2079 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>단코 카운터</title>
+<meta name="description" content="뜨개질 단수와 코수를 탭으로 기록하는 카운터">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧶</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#17181a;
+    --surface:#202226;
+    --surface-2:#292c31;
+    --line:#34373c;
+    --yarn:#d6a73b;
+    --yarn-dim:#a5822c;
+    --teal:#4f7c74;
+    --teal-dim:#3c5f58;
+    --text:#f1ede4;
+    --text-muted:#90949a;
+    --rust:#b5533c;
+    --rust-dim:#8f4130;
+  }
+
+  *{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,
+      "Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    overscroll-behavior:none;
+  }
+
+  .app{
+    max-width:420px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:20px 16px 100px;
+    gap:14px;
+  }
+
+  .header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:2px;
+  }
+
+  .brand{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:19px;
+  }
+
+  .brand span{
+    color:var(--yarn);
+  }
+
+  .reset-all{
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    font-size:13px;
+    padding:6px 4px;
+    cursor:pointer;
+  }
+
+  .reset-all:active{
+    color:var(--rust);
+  }
+
+  .save-warning{
+    font-size:11.5px;
+    color:#d9836d;
+    background:rgba(181,83,60,0.12);
+    border:1px solid rgba(181,83,60,0.3);
+    border-radius:8px;
+    padding:7px 10px;
+    margin-bottom:2px;
+    line-height:1.4;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 18px;
+  }
+
+  .card-title{
+    font-size:12.5px;
+    color:var(--text-muted);
+    letter-spacing:0.02em;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
+  .stat-row{
+    display:flex;
+    gap:10px;
+  }
+
+  .stat-card{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .stat-label{
+    font-size:12px;
+    color:var(--text-muted);
+  }
+
+  .stat-value-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .stat-num{
+    font-family:'Fraunces',serif;
+    font-size:26px;
+    font-weight:500;
+  }
+
+  .stat-btns{
+    display:flex;
+    gap:6px;
+  }
+
+  .icon-btn{
+    width:30px;
+    height:30px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    background:var(--surface-2);
+    color:var(--text-muted);
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  .icon-btn:active{
+    background:var(--line);
+    color:var(--text);
+    transform:scale(0.94);
+  }
+
+  .row-zone{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    cursor:pointer;
+    min-height:280px;
+    overflow:hidden;
+    transition:background .08s ease, border-color .2s;
+    text-align:center;
+    padding:20px;
+    touch-action:pan-y;
+  }
+
+  .row-zone:active{
+    background:var(--surface-2);
+  }
+
+  .row-zone.special{
+    border-color:var(--yarn-dim);
+  }
+
+  .row-zone .name{
+    font-size:14px;
+    color:var(--text-muted);
+    margin-bottom:6px;
+  }
+
+  .row-zone .num{
+    font-family:'Fraunces',serif;
+    font-size:104px;
+    font-weight:600;
+    color:var(--yarn);
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .row-zone .hint{
+    margin-top:12px;
+    font-size:13px;
+    color:var(--text-muted);
+  }
+
+  .row-badge{
+    margin-top:12px;
+    font-size:12.5px;
+    font-weight:600;
+    padding:5px 12px;
+    border-radius:20px;
+    display:inline-block;
+  }
+
+  .row-badge.inc{
+    background:rgba(214,167,59,0.16);
+    color:var(--yarn);
+  }
+
+  .row-badge.dec{
+    background:rgba(181,83,60,0.18);
+    color:#d9836d;
+  }
+
+  .row-badge.mix{
+    background:rgba(79,124,116,0.2);
+    color:#8fc2b6;
+  }
+
+  .ripple{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(214,167,59,0.18);
+    transform:scale(0);
+    animation:ripple-anim .5s ease-out forwards;
+    pointer-events:none;
+  }
+
+  @keyframes ripple-anim{
+    to{
+      transform:scale(1);
+      opacity:0;
+    }
+  }
+
+  .row-footer{
+    display:flex;
+    gap:10px;
+  }
+
+  .row-footer button{
+    flex:1;
+    height:44px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--text);
+    font-size:14.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+
+  .row-footer button:active{
+    background:var(--surface-2);
+    transform:scale(0.98);
+  }
+
+  .row-footer .minus{
+    color:var(--text-muted);
+  }
+
+  .add-link{
+    background:none;
+    border:none;
+    color:var(--yarn);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    padding:2px;
+  }
+
+  .rule-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 0;
+    border-top:1px solid var(--line);
+  }
+
+  .rule-item:first-of-type{
+    border-top:none;
+  }
+
+  .rule-info{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .rule-type{
+    font-size:13.5px;
+    font-weight:600;
+  }
+
+  .rule-type.inc{
+    color:var(--yarn);
+  }
+
+  .rule-type.dec{
+    color:#d9836d;
+  }
+
+  .rule-detail{
+    font-size:12px;
+    color:var(--text-muted);
+  }
+
+  .rule-del{
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    font-size:18px;
+    cursor:pointer;
+    padding:4px 8px;
+  }
+
+  .rule-del:active{
+    color:var(--rust);
+  }
+
+  .empty-msg{
+    font-size:12.5px;
+    color:var(--text-muted);
+    padding:4px 0;
+  }
+
+  .chart-upload{
+    border:1.5px dashed var(--line);
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+    color:var(--text-muted);
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  .chart-upload:active{
+    background:var(--surface-2);
+  }
+
+  .chart-preview{
+    position:relative;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+
+  .chart-preview img{
+    display:block;
+    width:100%;
+    height:auto;
+  }
+
+  .chart-marker{
+    position:absolute;
+    left:0;
+    right:0;
+    height:0;
+    border-top:2.5px solid var(--yarn);
+    pointer-events:none;
+  }
+
+  .chart-marker::after{
+    content:attr(data-label);
+    position:absolute;
+    right:6px;
+    top:-19px;
+    background:var(--yarn);
+    color:#17181a;
+    font-size:10.5px;
+    font-weight:700;
+    padding:2px 6px;
+    border-radius:5px;
+  }
+
+  .chart-controls{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .field-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+
+  .field-row label{
+    font-size:13px;
+    color:var(--text-muted);
+  }
+
+  .field-row input[type=number]{
+    width:70px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--text);
+    font-size:14px;
+    padding:7px 8px;
+    text-align:center;
+  }
+
+  .toggle-group{
+    display:flex;
+    gap:6px;
+  }
+
+  .toggle-btn{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text-muted);
+    font-size:12.5px;
+    padding:7px 10px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+
+  .toggle-btn.active{
+    background:var(--teal-dim);
+    border-color:var(--teal);
+    color:var(--text);
+  }
+
+  .chart-remove{
+    font-size:12px;
+    color:var(--text-muted);
+    background:none;
+    border:none;
+    cursor:pointer;
+    margin-top:8px;
+  }
+
+  .chart-remove:active{
+    color:var(--rust);
+  }
+
+  .footnote{
+    text-align:center;
+    color:var(--text-muted);
+    font-size:11.5px;
+    line-height:1.5;
+    margin-top:4px;
+  }
+
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:10;
+    padding:20px;
+  }
+
+  .overlay.show{
+    display:flex;
+  }
+
+  .dialog{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:20px;
+    max-width:340px;
+    width:100%;
+  }
+
+  .dialog h3{
+    margin:0 0 14px;
+    font-size:15px;
+    font-weight:600;
+  }
+
+  .dialog p{
+    margin:0 0 16px;
+    font-size:14.5px;
+    line-height:1.5;
+  }
+
+  .dialog .actions{
+    display:flex;
+    gap:8px;
+    margin-top:6px;
+  }
+
+  .dialog button.plain{
+    flex:1;
+    height:42px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    background:var(--surface-2);
+    color:var(--text);
+  }
+
+  .dialog button.confirm{
+    flex:1;
+    height:42px;
+    border-radius:10px;
+    border:1px solid var(--rust);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    background:var(--rust);
+    color:#fff;
+  }
+
+  .dialog button.primary{
+    flex:1;
+    height:42px;
+    border-radius:10px;
+    border:1px solid var(--yarn-dim);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    background:var(--yarn);
+    color:#17181a;
+  }
+
+  .form-field{
+    margin-bottom:12px;
+  }
+
+  .form-field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--text-muted);
+    margin-bottom:6px;
+  }
+
+  .form-field input,
+  .form-field select{
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:9px;
+    color:var(--text);
+    font-size:14.5px;
+    padding:10px 10px;
+  }
+
+  .type-toggle{
+    display:flex;
+    gap:8px;
+  }
+
+  .type-toggle button{
+    flex:1;
+    height:40px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    background:var(--surface-2);
+    color:var(--text-muted);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+
+  .type-toggle button.active.inc{
+    background:rgba(214,167,59,0.18);
+    border-color:var(--yarn-dim);
+    color:var(--yarn);
+  }
+
+  .type-toggle button.active.dec{
+    background:rgba(181,83,60,0.18);
+    border-color:var(--rust-dim);
+    color:#d9836d;
+  }
+
+  .rule-sentence{
+    font-size:12.5px;
+    color:var(--text-muted);
+    background:var(--surface-2);
+    border-radius:8px;
+    padding:9px 10px;
+    margin-bottom:14px;
+    line-height:1.5;
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%) translateY(10px);
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-size:13.5px;
+    padding:10px 16px;
+    border-radius:10px;
+    opacity:0;
+    transition:opacity .25s, transform .25s;
+    z-index:20;
+    pointer-events:none;
+    max-width:90%;
+    text-align:center;
+  }
+
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="brand">단코<span>·</span>카운터</div>
+    <button class="reset-all" id="resetAllBtn">전체 초기화</button>
+  </div>
+
+  <div
+    class="save-warning"
+    id="saveWarning"
+    style="display:none;"
+  >
+    ⚠ 이 브라우저에는 저장할 수 없어요
+    (시크릿 모드이거나 저장 공간이 가득 찼을 수 있어요)
+  </div>
+
+  <div class="stat-row">
+    <div class="card stat-card">
+      <span class="stat-label">이 단 코수</span>
+
+      <div class="stat-value-row">
+        <span class="stat-num" id="stitchNum">0</span>
+
+        <div class="stat-btns">
+          <button class="icon-btn" id="stitchMinus">−</button>
+          <button class="icon-btn" id="stitchPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card stat-card">
+      <span class="stat-label">전체 코수</span>
+
+      <div class="stat-value-row">
+        <span class="stat-num" id="totalNum">0</span>
+
+        <div class="stat-btns">
+          <button class="icon-btn" id="totalMinus">−</button>
+          <button class="icon-btn" id="totalPlus">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-zone" id="rowZone">
+    <span class="name">단수 (탭해서 한 단 완료)</span>
+    <span class="num" id="rowNum">0</span>
+
+    <span
+      class="row-badge"
+      id="rowBadge"
+      style="display:none;"
+    ></span>
+
+    <span class="hint" id="rowHint">
+      화면을 탭하면 단수가 올라가고, 이 단 코수는 0으로 초기화돼요
+    </span>
+  </div>
+
+  <div class="row-footer">
+    <button class="minus" id="rowMinus">−1 단</button>
+    <button id="rowStitchReset">이 단 코수만 초기화</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      늘림 · 줄임 규칙
+      <button class="add-link" id="addRuleBtn">
+        + 규칙 추가
+      </button>
+    </div>
+
+    <div id="rulesList">
+      <div class="empty-msg">
+        등록된 규칙이 없어요.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">패턴 차트</div>
+
+    <div id="chartArea">
+      <div class="chart-upload" id="chartUploadBtn">
+        사진을 눌러 차트 이미지를 추가하세요
+      </div>
+    </div>
+
+    <input
+      type="file"
+      id="chartFileInput"
+      accept="image/*"
+      style="display:none;"
+    >
+
+    <div
+      class="chart-controls"
+      id="chartControls"
+      style="display:none;"
+    >
+      <div class="field-row">
+        <label>차트 총 단수</label>
+
+        <input
+          type="number"
+          id="chartTotalRows"
+          min="1"
+          value="20"
+        >
+      </div>
+
+      <div class="field-row">
+        <label>진행 방향</label>
+
+        <div class="toggle-group">
+          <button
+            class="toggle-btn active"
+            id="dirBottomUp"
+          >
+            아래→위
+          </button>
+
+          <button
+            class="toggle-btn"
+            id="dirTopDown"
+          >
+            위→아래
+          </button>
+        </div>
+      </div>
+
+      <button
+        class="chart-remove"
+        id="chartRemoveBtn"
+      >
+        차트 이미지 삭제
+      </button>
+    </div>
+  </div>
+
+  <div class="footnote">
+    단수를 탭해서 세고, 코수는 필요할 때 옆 카드의 +/−로 조절하세요.
+    <br>
+    기록은 이 브라우저(기기)에만 저장돼요. 다른 기기와는 공유되지 않아요.
+  </div>
+</div>
+
+<div class="overlay" id="confirmOverlay">
+  <div class="dialog">
+    <p id="confirmText"></p>
+
+    <div class="actions">
+      <button class="plain" id="confirmCancel">
+        취소
+      </button>
+
+      <button class="confirm" id="confirmOk">
+        확인
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ruleOverlay">
+  <div class="dialog">
+    <h3>늘림 · 줄임 규칙</h3>
+
+    <div class="form-field">
+      <label>유형</label>
+
+      <div class="type-toggle">
+        <button
+          type="button"
+          class="inc active"
+          id="typeIncBtn"
+        >
+          늘림
+        </button>
+
+        <button
+          type="button"
+          class="dec"
+          id="typeDecBtn"
+        >
+          줄임
+        </button>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label>몇 단마다</label>
+      <input
+        type="number"
+        id="ruleInterval"
+        min="1"
+        value="4"
+      >
+    </div>
+
+    <div class="form-field">
+      <label>몇 코씩</label>
+      <input
+        type="number"
+        id="ruleCount"
+        min="1"
+        value="1"
+      >
+    </div>
+
+    <div class="form-field">
+      <label>몇 회 반복</label>
+      <input
+        type="number"
+        id="ruleRepeats"
+        min="1"
+        value="20"
+      >
+    </div>
+
+    <div class="form-field">
+      <label>시작 단</label>
+      <input
+        type="number"
+        id="ruleStart"
+        min="1"
+        value="4"
+      >
+    </div>
+
+    <div
+      class="rule-sentence"
+      id="ruleSentence"
+    ></div>
+
+    <div class="actions">
+      <button
+        class="plain"
+        id="ruleCancel"
+      >
+        취소
+      </button>
+
+      <button
+        class="primary"
+        id="ruleSave"
+      >
+        저장
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STATE_KEY = 'knitting-counter-state-v1';
+const CHART_KEY = 'knitting-counter-chart-v1';
+
+let state = {
+  rows: 0,
+  stitches: 0,
+  totalStitches: 0,
+  rules: []
+};
+
+let chart = {
+  image: null,
+  totalRows: 20,
+  direction: 'bottom-up'
+};
+
+let editingRuleId = null;
+
+const el = id => document.getElementById(id);
+
+const rowNumEl = el('rowNum');
+const stitchNumEl = el('stitchNum');
+const totalNumEl = el('totalNum');
+const rowZone = el('rowZone');
+const rowBadgeEl = el('rowBadge');
+
+
+/* =========================
+   Rule
+========================= */
+
+function matchingRules(rowNumber){
+  return state.rules.filter(r => {
+    if(rowNumber < r.start){
+      return false;
+    }
+
+    const diff = rowNumber - r.start;
+
+    if(diff % r.interval !== 0){
+      return false;
+    }
+
+    const occurrence = diff / r.interval;
+
+    return occurrence < r.repeats;
+  });
+}
+
+
+function summarizeRules(rules){
+  const inc = rules
+    .filter(r => r.type === 'inc')
+    .reduce((sum, r) => sum + r.count, 0);
+
+  const dec = rules
+    .filter(r => r.type === 'dec')
+    .reduce((sum, r) => sum + r.count, 0);
+
+  const parts = [];
+
+  if(inc > 0){
+    parts.push(`늘림 ${inc}코`);
+  }
+
+  if(dec > 0){
+    parts.push(`줄임 ${dec}코`);
+  }
+
+  return parts.join(' · ');
+}
+
+
+/* =========================
+   Render
+========================= */
+
+function render(){
+  rowNumEl.textContent = state.rows;
+  stitchNumEl.textContent = state.stitches;
+  totalNumEl.textContent = state.totalStitches;
+
+  const nextRow = state.rows + 1;
+  const matches = matchingRules(nextRow);
+
+  if(matches.length > 0){
+    rowZone.classList.add('special');
+
+    rowBadgeEl.style.display = 'inline-block';
+
+    const hasInc = matches.some(r => r.type === 'inc');
+    const hasDec = matches.some(r => r.type === 'dec');
+
+    rowBadgeEl.className =
+      'row-badge ' +
+      (
+        hasInc && hasDec
+          ? 'mix'
+          : hasInc
+            ? 'inc'
+            : 'dec'
+      );
+
+    rowBadgeEl.textContent =
+      `다음 단: ${summarizeRules(matches)} 예정`;
+
+  } else {
+    rowZone.classList.remove('special');
+    rowBadgeEl.style.display = 'none';
+  }
+
+  renderRules();
+  renderChartMarker();
+}
+
+
+function renderRules(){
+  const list = el('rulesList');
+
+  if(state.rules.length === 0){
+    list.innerHTML =
+      '<div class="empty-msg">등록된 규칙이 없어요.</div>';
+
+    return;
+  }
+
+  const sorted = [...state.rules]
+    .sort((a, b) => a.start - b.start);
+
+  list.innerHTML = sorted.map(r => `
+    <div class="rule-item" data-id="${r.id}">
+      <div class="rule-info">
+
+        <span class="rule-type ${r.type}">
+          ${r.type === 'inc' ? '늘림' : '줄임'} ${r.count}코
+        </span>
+
+        <span class="rule-detail">
+          ${r.start}단부터
+          ${r.interval}단마다,
+          ${r.repeats}회
+          (마지막 ${r.start + (r.repeats - 1) * r.interval}단)
+        </span>
+
+      </div>
+
+      <button
+        class="rule-del"
+        data-id="${r.id}"
+      >
+        ×
+      </button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.rule-del')
+    .forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        deleteRule(btn.dataset.id);
+      });
+    });
+
+  list.querySelectorAll('.rule-item')
+    .forEach(item => {
+      item.addEventListener('click', () => {
+        openRuleForm(item.dataset.id);
+      });
+    });
+}
+
+
+/* =========================
+   Persistence
+========================= */
+
+let storageOk = true;
+
+
+function markStorageFailed(){
+  if(!storageOk){
+    return;
+  }
+
+  storageOk = false;
+
+  el('saveWarning').style.display = 'block';
+}
+
+
+function markStorageOk(){
+  if(storageOk){
+    return;
+  }
+
+  storageOk = true;
+
+  el('saveWarning').style.display = 'none';
+}
+
+
+function saveState(){
+  try{
+    localStorage.setItem(
+      STATE_KEY,
+      JSON.stringify(state)
+    );
+
+    markStorageOk();
+
+  }catch(e){
+    console.error('저장 실패', e);
+
+    markStorageFailed();
+  }
+}
+
+
+function loadState(){
+  try{
+    const raw =
+      localStorage.getItem(STATE_KEY);
+
+    if(raw){
+      const parsed = JSON.parse(raw);
+
+      if(typeof parsed.rows === 'number'){
+        state.rows = parsed.rows;
+      }
+
+      if(typeof parsed.stitches === 'number'){
+        state.stitches = parsed.stitches;
+      }
+
+      if(typeof parsed.totalStitches === 'number'){
+        state.totalStitches =
+          parsed.totalStitches;
+      }
+
+      if(Array.isArray(parsed.rules)){
+        state.rules = parsed.rules;
+      }
+    }
+
+  }catch(e){
+    console.error('불러오기 실패', e);
+  }
+}
+
+
+function saveChart(){
+  try{
+    localStorage.setItem(
+      CHART_KEY,
+      JSON.stringify(chart)
+    );
+
+    markStorageOk();
+
+  }catch(e){
+    console.error('차트 저장 실패', e);
+
+    markStorageFailed();
+
+    showToast(
+      '차트 이미지가 너무 커서 저장하지 못했어요.'
+    );
+  }
+}
+
+
+function loadChart(){
+  try{
+    const raw =
+      localStorage.getItem(CHART_KEY);
+
+    if(raw){
+      const parsed = JSON.parse(raw);
+
+      chart.image =
+        parsed.image || null;
+
+      chart.totalRows =
+        parsed.totalRows || 20;
+
+      chart.direction =
+        parsed.direction || 'bottom-up';
+    }
+
+  }catch(e){
+    console.error(
+      '차트 불러오기 실패',
+      e
+    );
+  }
+
+  applyChartUI();
+}
+
+
+/* =========================
+   UI helpers
+========================= */
+
+function vibrate(){
+  if(navigator.vibrate){
+    navigator.vibrate(8);
+  }
+}
+
+
+let toastTimer = null;
+
+function showToast(msg){
+  const toast = el('toast');
+
+  toast.textContent = msg;
+  toast.classList.add('show');
+
+  clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 1800);
+}
+
+
+function spawnRipple(x, y){
+  const ripple =
+    document.createElement('div');
+
+  ripple.className = 'ripple';
+
+  const size = 180;
+
+  ripple.style.width =
+    size + 'px';
+
+  ripple.style.height =
+    size + 'px';
+
+  ripple.style.left =
+    (x - size / 2) + 'px';
+
+  ripple.style.top =
+    (y - size / 2) + 'px';
+
+  rowZone.appendChild(ripple);
+
+  setTimeout(() => {
+    ripple.remove();
+  }, 500);
+}
+
+
+/* =========================
+   Row tap
+========================= */
+
+let tapStart = null;
+let lastTapAt = 0;
+
+
+rowZone.addEventListener(
+  'pointerdown',
+  e => {
+    tapStart = {
+      x: e.clientX,
+      y: e.clientY,
+      time: Date.now()
+    };
+  }
+);
+
+
+function completeRowTap(clientX, clientY){
+  const now = Date.now();
+
+  if(now - lastTapAt < 200){
+    return;
+  }
+
+  lastTapAt = now;
+
+  const nextRow =
+    state.rows + 1;
+
+  const matches =
+    matchingRules(nextRow);
+
+  if(matches.length > 0){
+    const before =
+      state.totalStitches;
+
+    matches.forEach(r => {
+      state.totalStitches +=
+        r.type === 'inc'
+          ? r.count
+          : -r.count;
+    });
+
+    state.totalStitches =
+      Math.max(
+        0,
+        state.totalStitches
+      );
+
+    showToast(
+      `${nextRow}단: ${summarizeRules(matches)} · 전체 코수 ${before} → ${state.totalStitches}`
+    );
+  }
+
+  state.rows = nextRow;
+  state.stitches = 0;
+
+  render();
+  saveState();
+  vibrate();
+
+  const rect =
+    rowZone.getBoundingClientRect();
+
+  spawnRipple(
+    clientX - rect.left,
+    clientY - rect.top
+  );
+}
+
+
+rowZone.addEventListener(
+  'pointerup',
+  e => {
+    if(!tapStart){
+      return;
+    }
+
+    const dx =
+      Math.abs(
+        e.clientX - tapStart.x
+      );
+
+    const dy =
+      Math.abs(
+        e.clientY - tapStart.y
+      );
+
+    const dt =
+      Date.now() - tapStart.time;
+
+    tapStart = null;
+
+    if(
+      dx > 12 ||
+      dy > 12 ||
+      dt > 800
+    ){
+      return;
+    }
+
+    completeRowTap(
+      e.clientX,
+      e.clientY
+    );
+  }
+);
+
+
+rowZone.addEventListener(
+  'pointercancel',
+  () => {
+    tapStart = null;
+  }
+);
+
+
+/* =========================
+   Counter buttons
+========================= */
+
+el('rowMinus')
+  .addEventListener('click', e => {
+    e.stopPropagation();
+
+    state.rows =
+      Math.max(
+        0,
+        state.rows - 1
+      );
+
+    render();
+    saveState();
+    vibrate();
+  });
+
+
+el('rowStitchReset')
+  .addEventListener('click', e => {
+    e.stopPropagation();
+
+    state.stitches = 0;
+
+    render();
+    saveState();
+    vibrate();
+  });
+
+
+el('stitchPlus')
+  .addEventListener('click', () => {
+    state.stitches += 1;
+
+    render();
+    saveState();
+  });
+
+
+el('stitchMinus')
+  .addEventListener('click', () => {
+    state.stitches =
+      Math.max(
+        0,
+        state.stitches - 1
+      );
+
+    render();
+    saveState();
+  });
+
+
+el('totalPlus')
+  .addEventListener('click', () => {
+    state.totalStitches += 1;
+
+    render();
+    saveState();
+  });
+
+
+el('totalMinus')
+  .addEventListener('click', () => {
+    state.totalStitches =
+      Math.max(
+        0,
+        state.totalStitches - 1
+      );
+
+    render();
+    saveState();
+  });
+
+
+/* =========================
+   Confirm dialog
+========================= */
+
+const confirmOverlay =
+  el('confirmOverlay');
+
+let confirmAction = null;
+
+
+function openConfirm(text, action){
+  el('confirmText').innerHTML =
+    text;
+
+  confirmAction =
+    action;
+
+  confirmOverlay
+    .classList
+    .add('show');
+}
+
+
+el('confirmCancel')
+  .addEventListener('click', () => {
+    confirmOverlay
+      .classList
+      .remove('show');
+  });
+
+
+el('confirmOk')
+  .addEventListener('click', () => {
+    if(confirmAction){
+      confirmAction();
+    }
+
+    confirmOverlay
+      .classList
+      .remove('show');
+  });
+
+
+confirmOverlay
+  .addEventListener('click', e => {
+    if(e.target === confirmOverlay){
+      confirmOverlay
+        .classList
+        .remove('show');
+    }
+  });
+
+
+el('resetAllBtn')
+  .addEventListener('click', () => {
+    openConfirm(
+      '전체 기록을 초기화할까요?<br>단수, 코수, 전체 코수, 등록된 규칙이 모두 초기화돼요. (차트 이미지는 유지됩니다)',
+      () => {
+        state = {
+          rows: 0,
+          stitches: 0,
+          totalStitches: 0,
+          rules: []
+        };
+
+        render();
+        saveState();
+      }
+    );
+  });
+
+
+/* =========================
+   Rule form
+========================= */
+
+const ruleOverlay =
+  el('ruleOverlay');
+
+let ruleType = 'inc';
+
+
+function setRuleType(type){
+  ruleType = type;
+
+  el('typeIncBtn')
+    .classList
+    .toggle(
+      'active',
+      type === 'inc'
+    );
+
+  el('typeDecBtn')
+    .classList
+    .toggle(
+      'active',
+      type === 'dec'
+    );
+
+  updateRuleSentence();
+}
+
+
+el('typeIncBtn')
+  .addEventListener(
+    'click',
+    () => setRuleType('inc')
+  );
+
+
+el('typeDecBtn')
+  .addEventListener(
+    'click',
+    () => setRuleType('dec')
+  );
+
+
+function updateRuleSentence(){
+  const interval =
+    parseInt(
+      el('ruleInterval').value
+    ) || 1;
+
+  const count =
+    parseInt(
+      el('ruleCount').value
+    ) || 1;
+
+  const repeats =
+    parseInt(
+      el('ruleRepeats').value
+    ) || 1;
+
+  const start =
+    parseInt(
+      el('ruleStart').value
+    ) || 1;
+
+  const last =
+    start +
+    (repeats - 1) * interval;
+
+  el('ruleSentence').textContent =
+    `${start}단부터 ${interval}단마다 ${count}코씩 ${ruleType === 'inc' ? '늘림' : '줄임'}을 ${repeats}회 반복 (마지막 적용: ${last}단)`;
+}
+
+
+[
+  'ruleInterval',
+  'ruleCount',
+  'ruleRepeats',
+  'ruleStart'
+].forEach(id => {
+  el(id)
+    .addEventListener(
+      'input',
+      updateRuleSentence
+    );
+});
+
+
+function openRuleForm(id){
+  editingRuleId =
+    id || null;
+
+  if(id){
+    const rule =
+      state.rules.find(
+        item => item.id === id
+      );
+
+    if(!rule){
+      return;
+    }
+
+    setRuleType(rule.type);
+
+    el('ruleInterval').value =
+      rule.interval;
+
+    el('ruleCount').value =
+      rule.count;
+
+    el('ruleRepeats').value =
+      rule.repeats;
+
+    el('ruleStart').value =
+      rule.start;
+
+  } else {
+    setRuleType('inc');
+
+    const suggestedStart =
+      Math.max(
+        1,
+        state.rows + 1
+      );
+
+    el('ruleInterval').value = 4;
+    el('ruleCount').value = 1;
+    el('ruleRepeats').value = 20;
+    el('ruleStart').value =
+      suggestedStart;
+  }
+
+  updateRuleSentence();
+
+  ruleOverlay
+    .classList
+    .add('show');
+}
+
+
+el('addRuleBtn')
+  .addEventListener(
+    'click',
+    () => openRuleForm(null)
+  );
+
+
+el('ruleCancel')
+  .addEventListener('click', () => {
+    ruleOverlay
+      .classList
+      .remove('show');
+  });
+
+
+ruleOverlay
+  .addEventListener('click', e => {
+    if(e.target === ruleOverlay){
+      ruleOverlay
+        .classList
+        .remove('show');
+    }
+  });
+
+
+el('ruleSave')
+  .addEventListener('click', () => {
+    const interval =
+      Math.max(
+        1,
+        parseInt(
+          el('ruleInterval').value
+        ) || 1
+      );
+
+    const count =
+      Math.max(
+        1,
+        parseInt(
+          el('ruleCount').value
+        ) || 1
+      );
+
+    const repeats =
+      Math.max(
+        1,
+        parseInt(
+          el('ruleRepeats').value
+        ) || 1
+      );
+
+    const start =
+      Math.max(
+        1,
+        parseInt(
+          el('ruleStart').value
+        ) || 1
+      );
+
+    if(editingRuleId){
+      const rule =
+        state.rules.find(
+          item =>
+            item.id === editingRuleId
+        );
+
+      if(rule){
+        rule.type = ruleType;
+        rule.interval = interval;
+        rule.count = count;
+        rule.repeats = repeats;
+        rule.start = start;
+      }
+
+    } else {
+      state.rules.push({
+        id:
+          Date.now().toString(36) +
+          Math.random()
+            .toString(36)
+            .slice(2, 6),
+
+        type: ruleType,
+        interval,
+        count,
+        repeats,
+        start
+      });
+    }
+
+    render();
+    saveState();
+
+    ruleOverlay
+      .classList
+      .remove('show');
+  });
+
+
+function deleteRule(id){
+  openConfirm(
+    '이 규칙을 삭제할까요?',
+    () => {
+      state.rules =
+        state.rules.filter(
+          rule => rule.id !== id
+        );
+
+      render();
+      saveState();
+    }
+  );
+}
+
+
+/* =========================
+   Chart
+========================= */
+
+function resizeImageFile(
+  file,
+  maxWidth,
+  quality
+){
+  return new Promise(
+    (resolve, reject) => {
+      const reader =
+        new FileReader();
+
+      reader.onerror =
+        () => reject(reader.error);
+
+      reader.onload = () => {
+        const img =
+          new Image();
+
+        img.onerror =
+          reject;
+
+        img.onload = () => {
+          const scale =
+            Math.min(
+              1,
+              maxWidth / img.width
+            );
+
+          const width =
+            Math.round(
+              img.width * scale
+            );
+
+          const height =
+            Math.round(
+              img.height * scale
+            );
+
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx =
+            canvas.getContext('2d');
+
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            width,
+            height
+          );
+
+          resolve(
+            canvas.toDataURL(
+              'image/jpeg',
+              quality
+            )
+          );
+        };
+
+        img.src =
+          reader.result;
+      };
+
+      reader.readAsDataURL(file);
+    }
+  );
+}
+
+
+function applyChartUI(){
+  const area =
+    el('chartArea');
+
+  const controls =
+    el('chartControls');
+
+  if(chart.image){
+    area.innerHTML = `
+      <div class="chart-preview">
+        <img
+          src="${chart.image}"
+          id="chartImg"
+        >
+
+        <div
+          class="chart-marker"
+          id="chartMarker"
+        ></div>
+      </div>
+    `;
+
+    area
+      .querySelector('.chart-preview')
+      .addEventListener(
+        'click',
+        () =>
+          el('chartFileInput').click()
+      );
+
+    controls.style.display =
+      'flex';
+
+    el('chartTotalRows').value =
+      chart.totalRows;
+
+    el('dirBottomUp')
+      .classList
+      .toggle(
+        'active',
+        chart.direction === 'bottom-up'
+      );
+
+    el('dirTopDown')
+      .classList
+      .toggle(
+        'active',
+        chart.direction === 'top-down'
+      );
+
+  } else {
+    area.innerHTML = `
+      <div
+        class="chart-upload"
+        id="chartUploadBtn"
+      >
+        사진을 눌러 차트 이미지를 추가하세요
+      </div>
+    `;
+
+    el('chartUploadBtn')
+      .addEventListener(
+        'click',
+        () =>
+          el('chartFileInput').click()
+      );
+
+    controls.style.display =
+      'none';
+  }
+
+  renderChartMarker();
+}
+
+
+function renderChartMarker(){
+  const marker =
+    el('chartMarker');
+
+  if(!marker){
+    return;
+  }
+
+  const total =
+    Math.max(
+      1,
+      chart.totalRows
+    );
+
+  const current =
+    Math.min(
+      state.rows,
+      total
+    );
+
+  const fraction =
+    current / total;
+
+  const posFromTop =
+    chart.direction === 'bottom-up'
+      ? 1 - fraction
+      : fraction;
+
+  marker.style.top =
+    (posFromTop * 100) + '%';
+
+  marker.setAttribute(
+    'data-label',
+    `${current}/${total}단`
+  );
+}
+
+
+if(el('chartUploadBtn')){
+  el('chartUploadBtn')
+    .addEventListener(
+      'click',
+      () =>
+        el('chartFileInput').click()
+    );
+}
+
+
+el('chartFileInput')
+  .addEventListener(
+    'change',
+    async e => {
+      const file =
+        e.target.files[0];
+
+      e.target.value = '';
+
+      if(!file){
+        return;
+      }
+
+      try{
+        const dataUrl =
+          await resizeImageFile(
+            file,
+            900,
+            0.75
+          );
+
+        chart.image =
+          dataUrl;
+
+        applyChartUI();
+        saveChart();
+
+      }catch(err){
+        console.error(
+          '이미지 처리 실패',
+          err
+        );
+
+        showToast(
+          '이미지를 불러오지 못했어요.'
+        );
+      }
+    }
+  );
+
+
+el('chartTotalRows')
+  .addEventListener(
+    'input',
+    () => {
+      chart.totalRows =
+        Math.max(
+          1,
+          parseInt(
+            el('chartTotalRows').value
+          ) || 1
+        );
+
+      renderChartMarker();
+      saveChart();
+    }
+  );
+
+
+el('dirBottomUp')
+  .addEventListener(
+    'click',
+    () => {
+      chart.direction =
+        'bottom-up';
+
+      applyChartUI();
+      saveChart();
+    }
+  );
+
+
+el('dirTopDown')
+  .addEventListener(
+    'click',
+    () => {
+      chart.direction =
+        'top-down';
+
+      applyChartUI();
+      saveChart();
+    }
+  );
+
+
+el('chartRemoveBtn')
+  .addEventListener(
+    'click',
+    () => {
+      openConfirm(
+        '차트 이미지를 삭제할까요?',
+        () => {
+          chart.image = null;
+
+          applyChartUI();
+          saveChart();
+        }
+      );
+    }
+  );
+
+
+/* =========================
+   Init
+========================= */
+
+loadState();
+loadChart();
+render();
+</script>
+
+</body>
+</html>
